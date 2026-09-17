@@ -42,19 +42,6 @@ npx github:mintonight/anki-card-formatter install
 npx github:mintonight/anki-card-formatter install -g
 `
 
-### 方式 3：通过 NPM / Git 作为依赖引入
-
-`ash
-# 直接通过 Git URL 安装到项目的 node_modules / package.json
-npm install github:mintonight/anki-card-formatter --save-dev
-`
-
-在 Node.js 代码中读取：
-`javascript
-const { getSkillContent } = require('anki-card-formatter');
-console.log(getSkillContent());
-`
-
 ---
 
 ## 核心特性
