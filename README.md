@@ -12,29 +12,70 @@ Best practices, formatting standards, and an automated processing pipeline for g
 
 ---
 
+## ⚡ 快速安装 (Quick Install)
+
+本项目原生支持标准的 **Agent Skills 协议**（兼容 Cursor、Claude Code、Codex、Antigravity 等主流 AI Agent 工具）。
+
+### 方式 1：通过官方 Skills CLI（推荐，一键安装给各 AI 工具）
+
+无需手动下载，直接使用官方标准 
+px skills：
+
+`ash
+# 自动检测并安装到当前项目 Agent 目录（如 .gemini/skills, .agents/skills）
+npx skills add mintonight/anki-card-formatter -y
+
+# 全局安装（所有项目通用）：
+npx skills add mintonight/anki-card-formatter -g -y
+
+# 指定安装给特定 Agent（如 claude-code, cursor, codex 等）：
+npx skills add mintonight/anki-card-formatter --agent claude-code cursor
+`
+
+### 方式 2：通过 NPX 一键脚本安装
+
+`ash
+# 自动在当前项目创建技能文件
+npx github:mintonight/anki-card-formatter install
+
+# 或全局安装至用户主目录 (~/.gemini/, ~/.codex/ 等)
+npx github:mintonight/anki-card-formatter install -g
+`
+
+### 方式 3：通过 NPM / Git 作为依赖引入
+
+`ash
+# 直接通过 Git URL 安装到项目的 node_modules / package.json
+npm install github:mintonight/anki-card-formatter --save-dev
+`
+
+在 Node.js 代码中读取：
+`javascript
+const { getSkillContent } = require('anki-card-formatter');
+console.log(getSkillContent());
+`
+
+---
+
 ## 核心特性
 
 - 🛡️ **三步占位隔离管道**：在 Markdown 解析前自动隔离保护代码块与 LaTeX 公式，渲染后再恢复为 Anki 原生标签。
 - 📐 **原生 MathJax 对齐**：
   - 行间公式：<anki-mathjax block="true">[ ... ]</anki-mathjax>
   - 行内公式：<anki-mathjax>( ... )</anki-mathjax>
-  - 规范使用标准 LaTeX 宏命令替代裸 Unicode 符号。
+  - 自动规范使用标准 LaTeX 宏命令（如 \Psi \quad \psi）替代裸 Unicode 符号。
 - 🎨 **GitHub 浅色高质感样式**：
   - 代码块预设 GitHub 浅色风格（浅灰底 #f6f8fa + 细描边 #d0d7de + 等宽字体 + 横向滑动支持）。
   - 行内代码徽章风格（#eff1f3 底色 + 红色高亮强调）。
 
 ---
 
-## 快速使用
+## 完整规范与 Python 流水线
 
-完整规范和即用型 Python 转换流水线代码详见 [SKILL.md](./SKILL.md)。
+规范细节及开箱即用的 Python 代码实现详见 [SKILL.md](./SKILL.md)。
 
 ---
 
-## Agent 与技能复用
-
-将本仓库的 [SKILL.md](./SKILL.md) 放入你的 Agent 技能目录（如 .gemini/skills/anki-card-formatter/SKILL.md 或 .agents/skills/anki-card-formatter/SKILL.md），任何 AI 助手均可直接遵循并自动生成高质感的 Anki 卡片。
-
 ## 开源协议
 
-MIT License
+[MIT License](./LICENSE)

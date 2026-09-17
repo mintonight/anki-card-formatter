@@ -1,0 +1,30 @@
+{
+  "name": "anki-card-formatter",
+  "version": "1.0.0",
+  "description": "Best practices and processing pipeline for generating and formatting Anki cards containing LaTeX formulas (MathJax) and code blocks",
+  "main": "index.js",
+  "bin": {
+    "anki-card-formatter": "./bin/cli.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mintonight/anki-card-formatter.git"
+  },
+  "keywords": [
+    "anki",
+    "mathjax",
+    "latex",
+    "skills",
+    "agent",
+    "ankiconnect",
+    "codex",
+    "cursor",
+    "claude-code"
+  ],
+  "author": "mintonight",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/mintonight/anki-card-formatter/issues"
+  },
+  "homepage": "https://github.com/mintonight/anki-card-formatter#readme"
+}
