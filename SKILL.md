@@ -12,36 +12,33 @@ description: Best practices and processing pipeline for generating and formattin
 ## 核心痛点与避坑指南
 
 ### 1. 代码块换行丢失（代码挤成一团）
-- **根因**：Markdown 转换为 HTML 时，若直接输出为包含换行的纯文本或普通 `<code>` 标签，Anki 的 Web 渲染内核会将文本物理换行折叠为单个空格。
+- **原因**：Markdown 转换为 HTML 时，若直接输出为包含换行的纯文本或普通 `<code>` 标签，Anki 的 Web 渲染内核会将文本物理换行折叠为单个空格。
 - **解决方案**：
   - 必须使用标准 `<pre><code>...</code></pre>` 标签包裹。
   - 必须显式声明 CSS：`white-space: pre !important;`。
   - 对代码块中的字符执行 HTML 转义（`html.escape(code)`），防止 `<`、`>`、`&` 破坏 HTML 结构。
 
 ### 2. LaTeX 公式被 Markdown 解析器损坏
-- **根因**：公式中常见下划线（`W_q`）、星号（`*`）、反斜杠（`\(`、`\frac`），若在 Markdown 阶段直接暴露，会被误识别为斜体、强调或转义，导致公式断裂。
+- **原因**：公式中常见下划线（`W_q`）、星号（`*`）、反斜杠（`\(`、`\frac`），若在 Markdown 阶段直接暴露，会被误识别为斜体、强调或转义，导致公式断裂。
 - **解决方案**：采用**“占位隔离 - Markdown 渲染 - 占位恢复”**的三步管道法：
   1. 正则提取并扣除代码块与公式，用唯一哈希占位符替代（如 `XYZMATHBLOCK0XYZ`）。
   2. 对其余文本进行标准 Markdown 转换。
-  3. 还原占位符，转换为 Anki 原生 MathJax 语法。
+  3. 还原占位符，转换为 Anki 官方标准 MathJax 定界符。
 
-### 3. 公式未渲染：严禁裸写 `$...$` 或 Unicode 伪公式
-- **根因 1（缺乏原生标签）**：在复杂的自定义 HTML（如包含 `<div>`、`<span>` 或 `<style>` 的卡片）中，Anki 内置的 Webview **默认不会自动去扫描和解析裸写在普通 HTML 文本中的单美元符号 `$formula$`**，必须使用 Anki 识别的专用 MathJax 标签。
-- **根因 2（Unicode 字符混入 LaTeX）**：在 LaTeX 数学公式块中混入希腊字母或特殊符号的原始 Unicode 字符（例如写作 `\(( Ψ \quad ψ )\)`），MathJax 在遇到非 ASCII 的 Unicode 结合 LaTeX 间距宏（如 `\quad`）时会解析崩溃或降级为无法渲染的生文本。
-- **解决方案**：
-  - **规范一律使用标准 LaTeX 宏命令**：
-    - 大写：`\Psi`、`\Xi`、`\Gamma`、`\Delta`、`\Theta`、`\Lambda`、`\Sigma`、`\Phi`、`\Omega`
-    - 小写：`\psi`、`\xi`、`\gamma`、`\delta`、`\theta`、`\lambda`、`\sigma`、`\phi`、`\omega`、`\alpha`、`\beta` 等。
-  - **所有公式必须转换为 Anki 原生 MathJax 标签**：
-    - **行间（块级）公式**：
-      ```html
-      <anki-mathjax block="true">[ \text{Attention}(Q, K, V) = \text{softmax}\!\left(\frac{QK^\top}{\sqrt{d_k}}\right)V ]</anki-mathjax>
-      ```
-    - **行内公式**：
-      ```html
-      <anki-mathjax>( \Psi \quad \psi )</anki-mathjax>
-      <anki-mathjax>( X \in \mathbb{R}^{n \times d} )</anki-mathjax>
-      ```
+### 3. 公式未渲染与移动端（AnkiMobile / AnkiDroid）兼容性陷阱
+- **核心原则**：**一律使用 Anki 官方推荐的标准 LaTeX 定界符！**
+  - **行内公式**：`\( formula \)`（例：`\( E = mc^2 \)`）
+  - **独立行（行间）公式**：`\[ formula \]`（例：`\[ \sum_{i=1}^n i \]`）
+- **致命陷阱（严禁手写 `<anki-mathjax>` 自定义标签）**：
+  - 许多用户看到桌面版内部有 `<anki-mathjax>`，容易误以为 API 写入也要用这个标签。
+  - **事实**：`<anki-mathjax>` 是桌面版富文本编辑器生成卡片时的内部呈现。在移动端（iOS AnkiMobile / Android AnkiDroid）的 Webview 中，内置的 MathJax 配置直接匹配的是 `\(` 和 `\[` 定界符！
+  - 如果字段中直接写入了 `<anki-mathjax>`，移动端 Webview 不仅无法识别，还会因未检测到标准定界符而完全跳过数学公式渲染！
+- **严禁滥用 `<br>` 标签**：
+  - 严禁在卡片内容特别是 `<style>` 标签内部插入 `<br>`。
+  - 移动端对 HTML DOM 规范要求极高，`<style>` 内部出现 `<br>` 会导致样式解析器中断，使得整个页面的脚本与渲染管道瘫痪。
+- **严禁裸写 `$...$` 或 Unicode 伪公式**：
+  - Anki 默认不识别裸写单美元符号 `$...$`，必须转换为 `\( ... \) `。
+  - 严禁在公式中使用原始 Unicode 希腊字母（如 `Ψ`），必须转换为标准宏命令（如 `\Psi`、`\psi`）。
 
 ---
 
@@ -97,7 +94,7 @@ import markdown
 def convert_markdown_math_code(md_text: str) -> str:
     """
     将包含 Markdown、LaTeX 公式和多行/行内代码的原始文本
-    转换为完全兼容 Anki 的 HTML 字符串。
+    转换为完全兼容 Anki 桌面端与移动端（AnkiMobile/AnkiDroid）的 HTML 字符串。
     """
     # 1. 保护多行代码块 ```lang\ncode\n```
     fenced_blocks = {}
@@ -135,19 +132,21 @@ def convert_markdown_math_code(md_text: str) -> str:
 
     md_text = re.sub(r'`([^`\n]+)`', save_inline_code, md_text)
 
-    # 3. 保护并格式化 LaTeX 公式
+    # 3. 提取并保护 LaTeX 公式（采用 Anki 跨平台官方标准定界符）
     math_blocks = {}
     def save_block_math(m):
         key = f'XYZMATHBLOCK{len(math_blocks)}XYZ'
         formula = m.group(1).strip()
-        math_blocks[key] = f'<anki-mathjax block="true">[ {formula} ]</anki-mathjax>'
+        # 独立成行：\[ formula \]
+        math_blocks[key] = f'\\[ {formula} \\]'
         return key
 
     math_inlines = {}
     def save_inline_math(m):
         key = f'XYZMATHINLINE{len(math_inlines)}XYZ'
         formula = m.group(1).strip()
-        math_inlines[key] = f'<anki-mathjax>( {formula} )</anki-mathjax>'
+        # 行内公式：\( formula \)
+        math_inlines[key] = f'\\( {formula} \\)'
         return key
 
     # 优先匹配块级 $$...$$，再匹配行内 $...$
@@ -167,7 +166,7 @@ def convert_markdown_math_code(md_text: str) -> str:
     for k, v in fenced_blocks.items():
         html_text = html_text.replace(k, v)
 
-    # 6. 外层容器包裹
+    # 6. 外层容器包裹（避免任何多余 <br> 污染）
     container = (
         f'<div style="font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, '
         f'\'Helvetica Neue\', Arial, sans-serif; font-size: 15px; line-height: 1.65; color: #24292e; text-align: left;">\n'
@@ -179,11 +178,11 @@ def convert_markdown_math_code(md_text: str) -> str:
 
 ---
 
-## 检查清单（Checklist）
+## 检查清单（发布前自检）
 
-在将生成的卡片提交给 AnkiConnect 前，务必确认：
-- [ ] 多行代码块是否转义了 HTML 实体字符（避免 `<`、`>` 导致标签闭合异常）。
-- [ ] 多行代码容器是否包含 `white-space: pre !important;` 样式，避免换行丢失。
-- [ ] 是否严禁直接在公式内使用 Unicode 希腊字母（必须使用标准 `\Psi`、`\psi`、`\Xi`、`\xi` 等宏命令）。
-- [ ] 文本中所有需要数学渲染的符号/公式是否已统一转换为 `<anki-mathjax>( ... )</anki-mathjax>` 或块级 `<anki-mathjax block="true">[ ... ]</anki-mathjax>`（严禁在自定义 HTML 中裸留 `$...$`）。
-- [ ] 下划线与反斜杠是否在 Markdown 解析前完成保护，避免公式解析破损。
+- [ ] **代码块**：是否使用了 `<pre><code>` 并声明了 `white-space: pre !important;`？
+- [ ] **代码内容**：字符是否经过 `html.escape` 转义？
+- [ ] **公式语法**：是否统一为官方标准 `\( ... \)` 与 `\[ ... \]`，而没有手写 `<anki-mathjax>` 导致移动端失真？
+- [ ] **定界符**：是否消除了外层多余的括号（严禁 `\((` 或 `\[[`）？
+- [ ] **换行标签**：卡片背面是否有失控的 `<br>` 标签（特别是 `<style>` 标签内部）？
+- [ ] **希腊字母**：是否已将 Unicode 字母替换为标准 LaTeX 宏命令？
