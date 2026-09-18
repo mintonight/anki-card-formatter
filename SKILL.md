@@ -42,6 +42,14 @@ description: Best practices and processing pipeline for generating and formattin
 
 ---
 
+### 4. Markdown 表格未渲染（表格源码直接暴露在段落中）
+- **原因**：在 Python-Markdown（以及大部分 CommonMark 解析器）中，若 Markdown 表格（`| col1 | col2 |`）紧跟在普通段落文本之后而**缺少前置空行**，解析器会将其当作普通多行段落合并，导致 `tables` 扩展失效，表格源码原样显示为带有竖线的纯文本。
+- **解决方案**：
+  - 在 Markdown 解析前，编写自动间距函数（`ensure_table_spacing`），检测表格起止边界并确保表格块的前后均有物理空行（`\n\n`）。
+  - 在 CSS 中为 `table`、`th`、`td` 显式设置边框（`border-collapse: collapse; border: 1px solid #d0d7de`）和表头底色（`#f6f8fa`），确保渲染风格与 GitHub 一致。
+
+---
+
 ## 推荐视觉设计规范（GitHub 浅色清爽风）
 
 为了保证在各类模板和卡片中样式不被覆盖，建议在内容头部注入 scoped 样式或内联样式：
@@ -91,11 +99,34 @@ import html
 import re
 import markdown
 
+def ensure_table_spacing(md_text: str) -> str:
+    """确保 Markdown 表格前后均有空行，防止 tables 扩展因与上方段落粘连而失效"""
+    lines = md_text.split('\n')
+    new_lines = []
+    in_table = False
+    for line in lines:
+        stripped = line.strip()
+        is_table_row = stripped.startswith('|') and stripped.endswith('|')
+        if is_table_row:
+            if not in_table:
+                if new_lines and new_lines[-1].strip() != '':
+                    new_lines.append('')
+                in_table = True
+        else:
+            if in_table:
+                if stripped != '':
+                    new_lines.append('')
+                in_table = False
+        new_lines.append(line)
+    return '\n'.join(new_lines)
+
 def convert_markdown_math_code(md_text: str) -> str:
     """
     将包含 Markdown、LaTeX 公式和多行/行内代码的原始文本
     转换为完全兼容 Anki 桌面端与移动端（AnkiMobile/AnkiDroid）的 HTML 字符串。
     """
+    # 0. 自动补全表格前后空行
+    md_text = ensure_table_spacing(md_text)
     # 1. 保护多行代码块 ```lang\ncode\n```
     fenced_blocks = {}
     def save_fenced(m):
